@@ -1,6 +1,6 @@
 
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Briefcase, Users, FileText } from "lucide-react";
+import { LayoutDashboard, Users, FileText } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 const navItems = [
@@ -8,11 +8,6 @@ const navItems = [
     title: "Dashboard",
     href: "/",
     icon: LayoutDashboard,
-  },
-  {
-    title: "Jobs",
-    href: "/jobs",
-    icon: Briefcase,
   },
   {
     title: "Applicants",
