@@ -119,12 +119,12 @@ export const triggerRecategorize = async (jobId: number, criteria: string): Prom
     if (applicantsError) throw applicantsError;
     
     // For each applicant, call the edge function to re-evaluate
-    for (const applicant of applicants) {
+    for (const applicant of applicants || []) {
       try {
         // Prepare the prompt with the custom criteria
         const evaluationData = {
-          jobDescription: `${jobData.description}\n\nAdditional Evaluation Criteria: ${criteria}`,
-          jobSkills: jobData.skills,
+          jobDescription: `${jobData?.description}\n\nAdditional Evaluation Criteria: ${criteria}`,
+          jobSkills: jobData?.skills || [],
           resumeSummary: applicant.resume_summary
         };
         

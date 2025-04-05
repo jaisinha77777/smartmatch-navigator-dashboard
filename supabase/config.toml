@@ -1,5 +1,29 @@
 
+# This file is used to configure your Supabase project.
+# It was automatically generated based on your CLI version.
+#
+# See https://supabase.com/docs/reference/config for more information.
 project_id = "xxerkldcmnyhfhjonfeo"
 
+[api]
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[realtime]
+webhook_relay_secret = ""
+webhook_relay_enabled = false
+
+[studio]
+port = 54323
+api_url = "http://localhost"
+
+[functions]
 [functions.evaluate-applicant]
 verify_jwt = false
