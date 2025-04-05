@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,6 +44,10 @@ export function CriteriaEditor({ selectedJobId, onTriggerRecategorize }: Criteri
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Enter custom criteria to evaluate applicants for the selected job. 
+            This will use an AI model to re-categorize all applicants based on your criteria.
+          </p>
           <Textarea
             placeholder="Enter custom selection criteria..."
             className="min-h-[150px] resize-none"

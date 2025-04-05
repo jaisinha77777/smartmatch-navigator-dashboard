@@ -9,7 +9,91 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      applicants: {
+        Row: {
+          category: string
+          id: number
+          job_id: number | null
+          name: string
+          reasoning: string
+          resume_summary: string
+        }
+        Insert: {
+          category: string
+          id?: number
+          job_id?: number | null
+          name: string
+          reasoning: string
+          resume_summary: string
+        }
+        Update: {
+          category?: string
+          id?: number
+          job_id?: number | null
+          name?: string
+          reasoning?: string
+          resume_summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applicants_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_criteria: {
+        Row: {
+          created_at: string | null
+          criteria: string
+          id: number
+          job_id: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          criteria: string
+          id?: number
+          job_id?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          criteria?: string
+          id?: number
+          job_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_criteria_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          description: string
+          id: number
+          skills: string[]
+          title: string
+        }
+        Insert: {
+          description: string
+          id?: number
+          skills?: string[]
+          title: string
+        }
+        Update: {
+          description?: string
+          id?: number
+          skills?: string[]
+          title?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

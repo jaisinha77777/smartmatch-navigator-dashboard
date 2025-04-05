@@ -1,1 +1,5 @@
+
 project_id = "xxerkldcmnyhfhjonfeo"
+
+[functions.evaluate-applicant]
+verify_jwt = false
