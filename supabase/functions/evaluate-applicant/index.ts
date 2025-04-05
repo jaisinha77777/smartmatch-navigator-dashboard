@@ -1,110 +1,135 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { HfInference } from "https://esm.sh/@huggingface/inference@2.6.4"
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-// Initialize the Hugging Face inference client
-const hf = new HfInference(Deno.env.get("HUGGINGFACE_API_KEY"))
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { jobDescription, jobSkills, resumeSummary } = await req.json()
-    
-    if (!jobDescription || !jobSkills || !resumeSummary) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openAIApiKey) {
+      throw new Error('OPENAI_API_KEY is not configured in environment variables');
     }
 
-    // Create the prompt for the model
-    const prompt = `
-You are an AI recruiter. You need to evaluate if a candidate is a good fit for a job.
+    const { jobDescription, jobSkills, resumeSummary } = await req.json();
 
-Job Description: ${jobDescription}
-Required Skills: ${jobSkills.join(', ')}
+    console.log("Processing evaluation request:");
+    console.log("Job skills:", jobSkills);
+    console.log("Resume length:", resumeSummary.length);
 
-Resume Summary: ${resumeSummary}
+    const systemPrompt = `
+    You are an AI assistant that helps HR departments evaluate job applicants.
+    You will be given a job description, required skills, and a resume summary.
+    Your task is to evaluate whether the applicant is a good fit for the position.
+    Categorize the applicant as either:
+    - "Good Fit": The applicant meets almost all requirements and has relevant experience.
+    - "Maybe Fit": The applicant meets some requirements but lacks in other areas.
+    - "Not a Fit": The applicant does not meet the core requirements for the position.
+    
+    Provide a brief reasoning for your decision (1-2 sentences only).
+    Return ONLY a JSON object with two fields: 
+    - "category": one of the three categories above
+    - "reasoning": your brief explanation
+    `;
 
-Based on the job description, required skills, and the candidate's resume summary, categorize the candidate as either:
-1. "Good Fit"
-2. "Maybe Fit"
-3. "Not a Fit"
+    const userPrompt = `
+    Job Description:
+    ${jobDescription}
+    
+    Required Skills:
+    ${jobSkills.join(', ')}
+    
+    Resume Summary:
+    ${resumeSummary}
+    `;
 
-Also provide reasoning for your decision. Be concise but thorough.
-
-Format your response as JSON with the following structure:
-{ "category": "Good Fit|Maybe Fit|Not a Fit", "reasoning": "Your reasoning here" }
-`
-
-    // Use Hugging Face's mistralai/Mixtral-8x7B-Instruct-v0.1 model for evaluation
-    // This is a strong open-source model that can handle this type of task well
-    const result = await hf.textGeneration({
-      model: "mistralai/Mixtral-8x7B-Instruct-v0.1",
-      inputs: prompt,
-      parameters: {
-        max_new_tokens: 500,
-        temperature: 0.5,
-        return_full_text: false,
+    console.log("Sending request to OpenAI...");
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
       },
-    })
-    
-    console.log("Generated result:", result)
-    
-    // Parse the JSON response from the generated text
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.3, // Lower temperature for more consistent results
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("OpenAI API Error:", errorData);
+      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+    }
+
+    const result = await response.json();
+    const aiResponse = result.choices[0].message.content;
+    console.log("OpenAI Response:", aiResponse);
+
     try {
-      // Find JSON in the response
-      const jsonMatch = result.generated_text.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        const jsonStr = jsonMatch[0]
-        const evaluation = JSON.parse(jsonStr)
-        
-        // Validate that the response has the expected format
-        if (
-          evaluation && 
-          evaluation.category && 
-          ['Good Fit', 'Maybe Fit', 'Not a Fit'].includes(evaluation.category) && 
-          evaluation.reasoning
-        ) {
-          return new Response(
-            JSON.stringify(evaluation),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          )
-        }
+      // Try to parse the JSON response from the AI
+      const parsedResponse = JSON.parse(aiResponse);
+      
+      // Validate the format
+      if (!parsedResponse.category || !parsedResponse.reasoning) {
+        throw new Error("Response missing required fields");
       }
       
-      // If we couldn't parse the JSON or it doesn't have the expected format
-      return new Response(
-        JSON.stringify({ 
-          error: "Failed to parse model response", 
-          rawResponse: result.generated_text 
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    } catch (error) {
-      return new Response(
-        JSON.stringify({ 
-          error: "Failed to parse model response", 
-          message: error.message, 
-          rawResponse: result.generated_text 
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      // Ensure the category is one of the expected values
+      if (!["Good Fit", "Maybe Fit", "Not a Fit"].includes(parsedResponse.category)) {
+        parsedResponse.category = "Maybe Fit"; // Default if category is invalid
+      }
+      
+      return new Response(JSON.stringify(parsedResponse), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } catch (parseError) {
+      console.error("Error parsing OpenAI response:", parseError);
+      
+      // Attempt to extract category and reasoning if JSON parsing fails
+      let category = "Maybe Fit";
+      let reasoning = "Could not determine fit based on available information.";
+      
+      if (aiResponse.includes("Good Fit")) {
+        category = "Good Fit";
+      } else if (aiResponse.includes("Not a Fit")) {
+        category = "Not a Fit";
+      }
+      
+      // Extract some reasoning text
+      const reasoningMatch = aiResponse.match(/reasoning"?\s*:?\s*"?([^"]+)"?/i);
+      if (reasoningMatch && reasoningMatch[1]) {
+        reasoning = reasoningMatch[1].trim();
+      }
+      
+      return new Response(JSON.stringify({
+        category,
+        reasoning
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
   } catch (error) {
-    console.error("Error in evaluate-applicant function:", error)
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    console.error("Error processing request:", error.message);
+    return new Response(JSON.stringify({
+      error: error.message,
+      category: "Maybe Fit",
+      reasoning: "An error occurred during evaluation."
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
-})
+});

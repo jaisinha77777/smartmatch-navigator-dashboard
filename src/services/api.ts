@@ -2,6 +2,12 @@
 import { Job, Applicant } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Database } from "@/integrations/supabase/types";
+
+// Type definitions for database tables
+type JobsRow = Database['public']['Tables']['jobs']['Row'];
+type ApplicantsRow = Database['public']['Tables']['applicants']['Row'];
+type EvaluationCriteriaRow = Database['public']['Tables']['evaluation_criteria']['Row'];
 
 // Fetch all jobs from the Supabase database
 export const fetchJobs = async (): Promise<Job[]> => {
@@ -13,7 +19,7 @@ export const fetchJobs = async (): Promise<Job[]> => {
     if (error) throw error;
     
     // Transform database rows to match our Job type
-    return data.map(job => ({
+    return data.map((job: JobsRow) => ({
       id: job.id,
       title: job.title,
       description: job.description,
@@ -37,7 +43,7 @@ export const fetchApplicants = async (jobId: number): Promise<Applicant[]> => {
     if (error) throw error;
     
     // Transform database rows to match our Applicant type
-    return data.map(applicant => ({
+    return data.map((applicant: ApplicantsRow) => ({
       id: applicant.id,
       jobId: applicant.job_id,
       name: applicant.name,
@@ -62,7 +68,7 @@ export const fetchAllApplicants = async (): Promise<Applicant[]> => {
     if (error) throw error;
     
     // Transform database rows to match our Applicant type
-    return data.map(applicant => ({
+    return data.map((applicant: ApplicantsRow) => ({
       id: applicant.id,
       jobId: applicant.job_id,
       name: applicant.name,
