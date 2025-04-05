@@ -1,6 +1,6 @@
 
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Users, FileText } from "lucide-react";
+import { LayoutDashboard, Users } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 const navItems = [
@@ -13,12 +13,7 @@ const navItems = [
     title: "Applicants",
     href: "/applicants",
     icon: Users,
-  },
-  {
-    title: "Criteria Editor",
-    href: "/criteria",
-    icon: FileText,
-  },
+  }
 ];
 
 export function SidebarNav({ className }: { className?: string }) {

@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { ApplicantCard } from "@/components/applicant-card";
-import { fetchAllApplicants } from "@/services/api";
+import { fetchAllApplicants, evaluateAllApplicants, evaluateApplicant } from "@/services/api";
 import { Applicant } from "@/types";
 import { toast } from "sonner";
 import {
@@ -13,32 +13,73 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const ApplicantsPage = () => {
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [filter, setFilter] = useState<string>('all');
+  const [criteria, setCriteria] = useState<string>("");
+  const [isEvaluating, setIsEvaluating] = useState<boolean>(false);
+  const [selectedApplicant, setSelectedApplicant] = useState<number | null>(null);
   
   const applicantsPerPage = 5;
   
   useEffect(() => {
-    const loadApplicants = async () => {
-      setIsLoading(true);
-      try {
-        const data = await fetchAllApplicants();
-        setApplicants(data);
-      } catch (error) {
-        console.error("Failed to load applicants:", error);
-        toast.error("Failed to load applicants. Please try again later.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     loadApplicants();
   }, []);
+  
+  const loadApplicants = async () => {
+    setIsLoading(true);
+    try {
+      const data = await fetchAllApplicants();
+      setApplicants(data);
+    } catch (error) {
+      console.error("Failed to load applicants:", error);
+      toast.error("Failed to load applicants. Please try again later.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  const handleEvaluateAll = async () => {
+    if (!criteria.trim()) {
+      toast.error("Please enter evaluation criteria");
+      return;
+    }
+    
+    setIsEvaluating(true);
+    try {
+      await evaluateAllApplicants(criteria);
+      await loadApplicants();
+    } catch (error) {
+      console.error("Failed to evaluate applicants:", error);
+    } finally {
+      setIsEvaluating(false);
+    }
+  };
+  
+  const handleEvaluateSingle = async (applicantId: number) => {
+    if (!criteria.trim()) {
+      toast.error("Please enter evaluation criteria");
+      return;
+    }
+    
+    setSelectedApplicant(applicantId);
+    try {
+      await evaluateApplicant(applicantId, criteria);
+      await loadApplicants();
+    } catch (error) {
+      console.error("Failed to evaluate applicant:", error);
+    } finally {
+      setSelectedApplicant(null);
+    }
+  };
+  
   const filteredApplicants = filter === 'all' 
     ? applicants 
     : applicants.filter(applicant => applicant.category === filter);
@@ -69,6 +110,29 @@ const ApplicantsPage = () => {
         </header>
         <main className="flex-1 overflow-auto p-6">
           <div className="max-w-5xl mx-auto">
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Evaluation Criteria</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <Textarea 
+                    placeholder="Enter criteria for evaluating applicants..."
+                    value={criteria}
+                    onChange={(e) => setCriteria(e.target.value)}
+                    className="min-h-[100px]"
+                  />
+                  <Button 
+                    onClick={handleEvaluateAll} 
+                    disabled={isEvaluating || !criteria.trim()}
+                    className="w-full"
+                  >
+                    {isEvaluating ? "Evaluating..." : "Evaluate All Applicants"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+            
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-2xl font-bold">Applicant Profiles</h3>
               
@@ -112,7 +176,12 @@ const ApplicantsPage = () => {
             ) : (
               <div className="space-y-4">
                 {currentApplicants.map((applicant) => (
-                  <ApplicantCard key={applicant.id} applicant={applicant} />
+                  <ApplicantCard 
+                    key={applicant.id} 
+                    applicant={applicant} 
+                    onEvaluate={() => handleEvaluateSingle(applicant.id)}
+                    isEvaluating={selectedApplicant === applicant.id}
+                  />
                 ))}
                 
                 {totalPages > 1 && (
