@@ -1,3 +1,4 @@
+
 import { Job, Applicant } from "@/types";
 
 const API_BASE_URL = 'https://api.example.com'; // Replace with actual API base URL when available
@@ -53,7 +54,7 @@ export const fetchApplicants = async (jobId: number): Promise<Applicant[]> => {
               jobId: 1,
               name: "Jane Smith",
               resumeSummary: "5 years of experience with React, TypeScript, and frontend development. Led multiple teams in delivering high-quality web applications.",
-              category: "Good Fit",
+              category: "Good Fit" as const,
               reasoning: "Strong React experience and leadership skills match job requirements. Technical skills align with all required technologies."
             },
             {
@@ -61,7 +62,7 @@ export const fetchApplicants = async (jobId: number): Promise<Applicant[]> => {
               jobId: 1,
               name: "John Doe",
               resumeSummary: "3 years of Vue.js experience, some knowledge of React. Worked on several e-commerce websites.",
-              category: "Maybe Fit",
+              category: "Maybe Fit" as const,
               reasoning: "Has frontend experience but primary framework is Vue.js rather than React. May need additional training."
             },
             {
@@ -69,7 +70,7 @@ export const fetchApplicants = async (jobId: number): Promise<Applicant[]> => {
               jobId: 1,
               name: "Alex Johnson",
               resumeSummary: "Backend developer with Java and Spring Boot experience. Limited frontend exposure.",
-              category: "Not a Fit",
+              category: "Not a Fit" as const,
               reasoning: "Primarily backend focused with minimal frontend experience. Technology stack does not match job requirements."
             }
           ],
@@ -79,7 +80,7 @@ export const fetchApplicants = async (jobId: number): Promise<Applicant[]> => {
               jobId: 2,
               name: "Maria Garcia",
               resumeSummary: "PhD in Computer Science with focus on machine learning. 3 years of industry experience with TensorFlow and PyTorch.",
-              category: "Good Fit",
+              category: "Good Fit" as const,
               reasoning: "Strong academic background and industry experience in machine learning. Proficient in all required technologies."
             },
             {
@@ -87,7 +88,7 @@ export const fetchApplicants = async (jobId: number): Promise<Applicant[]> => {
               jobId: 2,
               name: "David Kim",
               resumeSummary: "Data analyst with 2 years of experience. Familiar with SQL and basic Python. No machine learning experience.",
-              category: "Maybe Fit",
+              category: "Maybe Fit" as const,
               reasoning: "Has data experience but lacks machine learning expertise. Would need significant training on ML frameworks."
             }
           ],
@@ -97,7 +98,7 @@ export const fetchApplicants = async (jobId: number): Promise<Applicant[]> => {
               jobId: 3,
               name: "Sarah Lee",
               resumeSummary: "Senior UX designer with 7 years of experience. Proficient in Figma and user research methodologies.",
-              category: "Good Fit",
+              category: "Good Fit" as const,
               reasoning: "Extensive UX experience and expertise in all required tools and methodologies. Great match for the position."
             },
             {
@@ -105,7 +106,7 @@ export const fetchApplicants = async (jobId: number): Promise<Applicant[]> => {
               jobId: 3,
               name: "Michael Brown",
               resumeSummary: "Graphic designer with 4 years of experience. Skilled in Photoshop and Illustrator, limited UX experience.",
-              category: "Maybe Fit",
+              category: "Maybe Fit" as const,
               reasoning: "Strong visual design skills but limited UX research experience. May need guidance on UX methodologies."
             },
             {
@@ -113,7 +114,7 @@ export const fetchApplicants = async (jobId: number): Promise<Applicant[]> => {
               jobId: 3,
               name: "Emily Wilson",
               resumeSummary: "Recent graduate with a degree in computer science. Completed a UX design course online.",
-              category: "Not a Fit",
+              category: "Not a Fit" as const,
               reasoning: "Limited professional experience in UX design. Technical background is strong but practical UX skills need development."
             }
           ]
@@ -139,7 +140,7 @@ export const fetchAllApplicants = async (): Promise<Applicant[]> => {
     return new Promise((resolve) => {
       setTimeout(() => {
         // Combine all applicants from different jobs
-        const allApplicants = [
+        const allApplicants: Applicant[] = [
           // Frontend Developer applicants
           {
             id: 101,
