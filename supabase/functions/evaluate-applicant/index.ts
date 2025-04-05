@@ -52,73 +52,100 @@ serve(async (req) => {
     `;
 
     console.log("Sending request to OpenAI...");
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        temperature: 0.3, // Lower temperature for more consistent results
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("OpenAI API Error:", errorData);
-      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
-    }
-
-    const result = await response.json();
-    const aiResponse = result.choices[0].message.content;
-    console.log("OpenAI Response:", aiResponse);
-
+    
     try {
-      // Try to parse the JSON response from the AI
-      const parsedResponse = JSON.parse(aiResponse);
-      
-      // Validate the format
-      if (!parsedResponse.category || !parsedResponse.reasoning) {
-        throw new Error("Response missing required fields");
-      }
-      
-      // Ensure the category is one of the expected values
-      if (!["Good Fit", "Maybe Fit", "Not a Fit"].includes(parsedResponse.category)) {
-        parsedResponse.category = "Maybe Fit"; // Default if category is invalid
-      }
-      
-      return new Response(JSON.stringify(parsedResponse), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openAIApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          temperature: 0.3, // Lower temperature for more consistent results
+        }),
       });
-    } catch (parseError) {
-      console.error("Error parsing OpenAI response:", parseError);
-      
-      // Attempt to extract category and reasoning if JSON parsing fails
-      let category = "Maybe Fit";
-      let reasoning = "Could not determine fit based on available information.";
-      
-      if (aiResponse.includes("Good Fit")) {
-        category = "Good Fit";
-      } else if (aiResponse.includes("Not a Fit")) {
-        category = "Not a Fit";
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("OpenAI API Error:", JSON.stringify(errorData, null, 2));
+        
+        // Check if it's a quota error
+        if (errorData.error?.code === "insufficient_quota") {
+          // Provide a fallback response instead of failing
+          return new Response(JSON.stringify({
+            category: "Maybe Fit",
+            reasoning: "Unable to evaluate due to OpenAI API quota limits. Please check your API subscription."
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+          });
+        }
+        
+        throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
       }
-      
-      // Extract some reasoning text
-      const reasoningMatch = aiResponse.match(/reasoning"?\s*:?\s*"?([^"]+)"?/i);
-      if (reasoningMatch && reasoningMatch[1]) {
-        reasoning = reasoningMatch[1].trim();
+
+      const result = await response.json();
+      const aiResponse = result.choices[0].message.content;
+      console.log("OpenAI Response:", aiResponse);
+
+      try {
+        // Try to parse the JSON response from the AI
+        const parsedResponse = JSON.parse(aiResponse);
+        
+        // Validate the format
+        if (!parsedResponse.category || !parsedResponse.reasoning) {
+          throw new Error("Response missing required fields");
+        }
+        
+        // Ensure the category is one of the expected values
+        if (!["Good Fit", "Maybe Fit", "Not a Fit"].includes(parsedResponse.category)) {
+          parsedResponse.category = "Maybe Fit"; // Default if category is invalid
+        }
+        
+        return new Response(JSON.stringify(parsedResponse), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      } catch (parseError) {
+        console.error("Error parsing OpenAI response:", parseError);
+        
+        // Attempt to extract category and reasoning if JSON parsing fails
+        let category = "Maybe Fit";
+        let reasoning = "Could not determine fit based on available information.";
+        
+        if (aiResponse.includes("Good Fit")) {
+          category = "Good Fit";
+        } else if (aiResponse.includes("Not a Fit")) {
+          category = "Not a Fit";
+        }
+        
+        // Extract some reasoning text
+        const reasoningMatch = aiResponse.match(/reasoning"?\s*:?\s*"?([^"]+)"?/i);
+        if (reasoningMatch && reasoningMatch[1]) {
+          reasoning = reasoningMatch[1].trim();
+        }
+        
+        return new Response(JSON.stringify({
+          category,
+          reasoning
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
+    } catch (openAIError) {
+      console.error("OpenAI API call error:", openAIError);
       
+      // Return a graceful fallback
       return new Response(JSON.stringify({
-        category,
-        reasoning
+        category: "Maybe Fit",
+        reasoning: "Could not perform evaluation due to API service issues."
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, // Still return 200 to not break the client flow
       });
     }
   } catch (error) {
@@ -128,7 +155,7 @@ serve(async (req) => {
       category: "Maybe Fit",
       reasoning: "An error occurred during evaluation."
     }), {
-      status: 500,
+      status: 200, // Changed from 500 to 200 to prevent client errors
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

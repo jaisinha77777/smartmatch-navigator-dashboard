@@ -136,7 +136,10 @@ export const triggerRecategorize = async (jobId: number, criteria: string): Prom
           }
         );
         
-        if (functionError) throw functionError;
+        if (functionError) {
+          console.error(`Error re-evaluating applicant ${applicant.id}:`, functionError);
+          continue;
+        }
         
         // Update the applicant record with the new evaluation
         const { error: updateError } = await supabase
@@ -147,7 +150,9 @@ export const triggerRecategorize = async (jobId: number, criteria: string): Prom
           })
           .eq('id', applicant.id);
         
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error(`Error updating applicant ${applicant.id}:`, updateError);
+        }
         
       } catch (error) {
         console.error(`Error re-evaluating applicant ${applicant.id}:`, error);
